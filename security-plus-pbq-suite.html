@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Security+ PBQ Suite</title>
+<style>
+  :root{
+    --bg:#0d1321; --panel:#141d2f; --panel-2:#1a2540; --line:#2a3654;
+    --text:#dbe4f5; --muted:#8496b8; --amber:#e8a33d; --cyan:#4fc3d9;
+    --ok:#4caf7d; --bad:#d9635a; --violet:#a78bda;
+    --mono:'Consolas','SFMono-Regular','Menlo',monospace; --sans:'Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:26px 16px 60px;}
+  .wrap{max-width:960px;margin:0 auto;}
+
+  .banner{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));border-radius:6px;padding:18px 22px;margin-bottom:18px;}
+  .banner .tag{font-family:var(--mono);font-size:12px;color:var(--amber);}
+  .banner h1{margin:6px 0 6px;font-size:21px;font-weight:600;color:#fff;}
+  .banner p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:0;}
+  .tab-btn{
+    background:transparent;border:1px solid transparent;border-bottom:none;
+    color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;
+    padding:10px 14px;cursor:pointer;border-radius:6px 6px 0 0;
+  }
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--cyan);background:var(--panel);border-color:var(--line);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .scenario{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:4px;padding:15px 18px;margin-bottom:20px;font-size:14px;line-height:1.6;}
+  .scenario strong{color:var(--cyan);}
+  .task-label{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 0 10px 2px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:18px;}
+  thead th{text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--panel-2);}
+  tbody td{padding:9px 10px;font-family:var(--mono);font-size:12.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.graded-correct{background:rgba(76,175,125,0.08);}
+  tbody tr.graded-wrong{background:rgba(217,99,90,0.10);}
+  tbody tr.flag-row{cursor:pointer;}
+  tbody tr.flag-row:hover{background:rgba(255,255,255,0.02);}
+
+  select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-family:var(--mono);font-size:12.5px;min-width:90px;}
+  select:focus{outline:1px solid var(--cyan);}
+
+  input[type=checkbox]{width:16px;height:16px;accent-color:var(--cyan);cursor:pointer;}
+
+  .explain{display:none;font-family:var(--sans);font-size:12px;color:var(--muted);line-height:1.5;padding-top:3px;}
+  tr.show-explain .explain{display:block;}
+  .verdict-icon{display:inline-block;width:14px;font-family:var(--mono);font-weight:700;}
+  .verdict-icon.ok{color:var(--ok);} .verdict-icon.bad{color:var(--bad);}
+
+  .controls{display:flex;gap:10px;margin:4px 0 8px;flex-wrap:wrap;}
+  button.act{font-family:var(--sans);font-size:14px;font-weight:600;padding:10px 18px;border-radius:4px;border:1px solid transparent;cursor:pointer;}
+  .btn-primary{background:var(--amber);color:#1a1300;}
+  .btn-primary:hover{background:#f0ae4d;}
+  .btn-ghost{background:transparent;color:var(--text);border-color:var(--line);}
+  .btn-ghost:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  .score-panel{display:none;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:16px 20px;margin-top:14px;}
+  .score-panel.visible{display:block;}
+  .score-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .score-num{font-family:var(--mono);font-size:24px;font-weight:700;}
+  .score-num.pass{color:var(--ok);} .score-num.fail{color:var(--bad);}
+  .score-sub{color:var(--muted);font-size:12.5px;}
+  .score-msg{font-size:13.5px;color:var(--text);margin-top:6px;line-height:1.5;}
+
+  /* Question blocks (dropdown / radio scenarios) */
+  .qblock{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;}
+  .qblock .qtext{font-size:13.5px;line-height:1.55;margin-bottom:10px;}
+  .qblock .qrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .radio-opt{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer;}
+  .radio-opt:hover{border-color:var(--cyan);}
+  .radio-opt.picked{border-color:var(--cyan);color:var(--cyan);}
+  .qblock .explain{padding-top:8px;border-top:1px dashed var(--line);margin-top:10px;}
+
+  /* Drag chips / DMZ zones */
+  .tray{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px dashed var(--line);border-radius:6px;padding:14px;margin-bottom:16px;min-height:56px;}
+  .chip{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:5px;
+    padding:9px 12px;font-family:var(--mono);font-size:12.5px;cursor:grab;
+    user-select:none;
+  }
+  .chip:active{cursor:grabbing;}
+  .zones{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+  @media(max-width:640px){.zones{grid-template-columns:1fr;}}
+  .zone{
+    border:1px solid var(--line);border-radius:6px;padding:12px;min-height:150px;
+    background:var(--panel);
+  }
+  .zone-label{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:10px;letter-spacing:0.02em;}
+  .zone.dmz .zone-label{color:var(--amber);}
+  .zone.internal .zone-label{color:var(--cyan);}
+  .zone-drop{min-height:110px;display:flex;flex-direction:column;gap:8px;}
+  .zone.dragover{border-color:var(--cyan);background:rgba(79,195,217,0.05);}
+  .chip.placed{width:100%;}
+  .chip.correct{border-color:var(--ok);}
+  .chip.wrong{border-color:var(--bad);}
+  .chip .chip-explain{display:none;font-size:11px;color:var(--muted);margin-top:5px;font-family:var(--sans);line-height:1.4;}
+  .chip.graded .chip-explain{display:block;}
+
+  /* Sortable list */
+  .sortable{list-style:none;margin:0 0 16px;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .sortable li{
+    display:flex;align-items:center;gap:10px;padding:11px 14px;
+    border-bottom:1px solid var(--line);font-size:13px;cursor:grab;background:var(--panel);
+  }
+  .sortable li:last-child{border-bottom:none;}
+  .sortable li.dragging{opacity:0.4;}
+  .sortable li .handle{color:var(--muted);font-family:var(--mono);}
+  .sortable li .step-num{font-family:var(--mono);color:var(--muted);width:18px;flex-shrink:0;}
+  .sortable li .step-phase{display:none;font-size:11px;color:var(--cyan);font-family:var(--mono);margin-left:auto;flex-shrink:0;}
+  .sortable li.graded-correct{border-left:3px solid var(--ok);}
+  .sortable li.graded-wrong{border-left:3px solid var(--bad);}
+  .sortable li.graded .step-phase{display:inline;}
+
+  .footnote{font-size:12px;color:var(--muted);margin-top:26px;border-top:1px solid var(--line);padding-top:14px;line-height:1.6;}
+
+  .pbq-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .pbq-nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:7px 12px;}
+  .pbq-nav a:hover{border-color:var(--cyan);color:var(--cyan);}
+  .pbq-nav a.current{color:var(--amber);border-color:var(--amber);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="pbq-nav">
+    <a href="index.html">← All PBQs</a>
+    <a href="security-plus-pbq.html">0 · Firewall &amp; ACL</a>
+    <a href="security-plus-pbq-suite.html#log" class="current" data-panel-link="log">1 · Log Analysis</a>
+    <a href="security-plus-pbq-suite.html#dmz" data-panel-link="dmz">2 · DMZ Placement</a>
+    <a href="security-plus-pbq-suite.html#ir" data-panel-link="ir">3 · IR Sequencing</a>
+    <a href="security-plus-pbq-suite.html#iam" data-panel-link="iam">4 · IAM / MDM</a>
+  </nav>
+
+  <div class="banner">
+    <div class="tag">PBQ SIMULATOR SUITE · SY0-701 PRACTICE</div>
+    <h1>Performance-Based Question Practice — 4 Domains</h1>
+    <p>Each tab is a self-contained simulation modeled on the CompTIA PBQ format: read the scenario, complete the interactive task, then grade yourself for explanations. Work through them in any order.</p>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-panel="log">1 · Log Analysis</button>
+    <button class="tab-btn" data-panel="dmz">2 · DMZ Placement</button>
+    <button class="tab-btn" data-panel="ir">3 · IR Sequencing</button>
+    <button class="tab-btn" data-panel="iam">4 · IAM / MDM</button>
+  </div>
+
+  <!-- ============ TAB 1: LOG ANALYSIS ============ -->
+  <div class="panel active" id="panel-log">
+    <div class="scenario">
+      You're triaging alerts for <strong>Northgate Retail's</strong> e-commerce platform. The SIEM has surfaced a burst of activity around the customer-lookup endpoint on the public web server (<strong>10.10.2.15</strong>), followed shortly after by unusual outbound traffic from an internal workstation. Review the log excerpt, flag the entries that are part of the attack pattern, then identify the attack type and the compromised host ("Patient Zero").
+    </div>
+
+    <p class="task-label">SIEM LOG EXCERPT — click a row to flag it as part of the attack</p>
+    <table id="log-table">
+      <thead><tr><th style="width:26px"></th><th>Time</th><th>Source</th><th>Destination</th><th>Event</th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
+
+    <div class="qblock">
+      <div class="qtext">What attack pattern do these log entries show?</div>
+      <div class="qrow" id="attack-type-opts" data-answer="sqli"></div>
+      <div class="explain" id="attack-type-explain">The repeated requests to the same endpoint with payloads like <code>' OR '1'='1</code> and <code>UNION SELECT</code> are classic SQL injection probing — the attacker is testing whether user input is sanitized before reaching the database query.</div>
+    </div>
+
+    <div class="qblock">
+      <div class="qtext">Which host is "Patient Zero" — the internal machine showing signs of compromise?</div>
+      <div class="qrow" id="patient-zero-opts" data-answer="10.20.4.15"></div>
+      <div class="explain" id="patient-zero-explain">10.20.4.15 begins an outbound connection to an unfamiliar external IP on a non-standard port shortly after the injection attempts succeed — that pattern (unexpected outbound beaconing right after an exploit attempt) is the signature of a freshly compromised host reaching out to a C2 server.</div>
+    </div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="log-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="log-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="log-score">
+      <div class="score-head"><span class="score-num" id="log-score-num">0/0</span><span class="score-sub">points</span></div>
+      <div class="score-msg" id="log-score-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 2: DMZ PLACEMENT ============ -->
+  <div class="panel" id="panel-dmz">
+    <div class="scenario">
+      <strong>Northgate Retail</strong> is redesigning its perimeter after the incident above. Drag each server into the zone where it belongs. Remember: anything the public internet talks to directly sits in the <strong>DMZ</strong>, screened by a firewall on both sides; anything holding sensitive data or used only by internal staff belongs in the <strong>Internal / Trusted</strong> zone, reachable only through the DMZ, never directly from the internet.
+    </div>
+
+    <p class="task-label">DRAG EACH SERVER INTO THE CORRECT ZONE</p>
+    <div class="tray" id="chip-tray"></div>
+
+    <div class="zones">
+      <div class="zone dmz" id="zone-dmz" data-zone="dmz">
+        <div class="zone-label">DMZ (public-facing, screened)</div>
+        <div class="zone-drop" id="drop-dmz"></div>
+      </div>
+      <div class="zone internal" id="zone-internal" data-zone="internal">
+        <div class="zone-label">INTERNAL / TRUSTED (staff &amp; sensitive data)</div>
+        <div class="zone-drop" id="drop-internal"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="dmz-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="dmz-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="dmz-score">
+      <div class="score-head"><span class="score-num" id="dmz-score-num">0/0</span><span class="score-sub">placed correctly</span></div>
+      <div class="score-msg" id="dmz-score-msg">Check each card below for why it belongs where it does.</div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 3: IR SEQUENCING ============ -->
+  <div class="panel" id="panel-ir">
+    <div class="scenario">
+      Northgate's incident is now confirmed. Drag the response actions below into the correct chronological order, following the <strong>NIST incident response lifecycle</strong>: Preparation → Detection &amp; Analysis → Containment, Eradication &amp; Recovery → Post-Incident Activity.
+    </div>
+
+    <p class="task-label">DRAG TO REORDER — TOP OF LIST HAPPENS FIRST</p>
+    <ul class="sortable" id="ir-list"></ul>
+
+    <div class="controls">
+      <button class="act btn-primary" id="ir-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="ir-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="ir-score">
+      <div class="score-head"><span class="score-num" id="ir-score-num">0/0</span><span class="score-sub">steps in correct position</span></div>
+      <div class="score-msg" id="ir-score-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 4: IAM / MDM ============ -->
+  <div class="panel" id="panel-iam">
+    <div class="scenario">
+      Northgate is also tightening identity and device management. For each scenario below, choose the protocol or policy that fits — the details in the description (what's being proven, to whom, and how) point to a specific answer.
+    </div>
+
+    <p class="task-label">PART A — MATCH THE AUTHENTICATION PROTOCOL</p>
+    <div id="iam-proto-block"></div>
+
+    <p class="task-label" style="margin-top:22px;">PART B — CHOOSE THE MDM RESPONSE</p>
+    <div id="iam-mdm-block"></div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="iam-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="iam-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="iam-score">
+      <div class="score-head"><span class="score-num" id="iam-score-num">0/0</span><span class="score-sub">correct</span></div>
+      <div class="score-msg" id="iam-score-msg"></div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    These are practice simulations modeled on the interaction styles described in CompTIA's official PBQ overview (drag-and-drop, log review, ordered sequencing, matching) — not official CompTIA items or pulled from the real exam bank. Scenarios build on the same fictional company across tabs so the whole suite reads as one continuous incident, start to finish.
+  </div>
+
+</div>
+
+<script>
+/* ---------- TAB SWITCHING ---------- */
+function activatePanel(name){
+  const valid = ["log","dmz","ir","iam"];
+  if(!valid.includes(name)) name = "log";
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.panel===name));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.id==="panel-"+name));
+  document.querySelectorAll(".pbq-nav a[data-panel-link]").forEach(a=>a.classList.toggle("current", a.dataset.panelLink===name));
+}
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    history.replaceState(null,"","#"+btn.dataset.panel);
+    activatePanel(btn.dataset.panel);
+  });
+});
+window.addEventListener("hashchange", ()=> activatePanel(location.hash.replace("#","")));
+activatePanel(location.hash.replace("#",""));
+
+/* ================= TAB 1: LOG ANALYSIS ================= */
+const logs = [
+  {time:"09:14:02", src:"198.51.100.9",  dst:"10.10.2.15:443", event:"GET /lookup?id=4471", attack:false},
+  {time:"09:14:03", src:"198.51.100.9",  dst:"10.10.2.15:443", event:"GET /lookup?id=4471' OR '1'='1", attack:true},
+  {time:"09:14:04", src:"198.51.100.9",  dst:"10.10.2.15:443", event:"GET /lookup?id=4471 UNION SELECT username,password FROM users--", attack:true},
+  {time:"09:14:06", src:"198.51.100.9",  dst:"10.10.2.15:443", event:"GET /lookup?id=1' AND SLEEP(5)--", attack:true},
+  {time:"09:14:09", src:"10.10.2.15",    dst:"10.10.2.30:1433", event:"Query executed: unexpected SELECT against users table", attack:true},
+  {time:"09:15:41", src:"10.20.4.15",    dst:"203.0.113.201:4444", event:"Outbound connection established, non-standard port", attack:true},
+  {time:"09:16:02", src:"10.20.4.22",    dst:"8.8.8.8:53", event:"DNS query: mail.northgateretail.com", attack:false},
+  {time:"09:16:10", src:"10.20.4.15",    dst:"203.0.113.201:4444", event:"Beaconing pattern: repeated small outbound packets every 30s", attack:true},
+  {time:"09:17:55", src:"192.0.2.14",    dst:"10.10.2.15:443", event:"GET /products?category=shoes", attack:false},
+];
+
+const logBody = document.getElementById("log-body");
+let logFlags = new Array(logs.length).fill(false);
+
+logs.forEach((l,i)=>{
+  const tr = document.createElement("tr");
+  tr.className = "flag-row";
+  tr.dataset.index = i;
+  tr.innerHTML = `<td><span class="verdict-icon" id="log-icon-${i}"></span></td><td>${l.time}</td><td>${l.src}</td><td>${l.dst}</td><td>${l.event}</td>`;
+  tr.addEventListener("click", ()=>{
+    logFlags[i] = !logFlags[i];
+    tr.style.background = logFlags[i] ? "rgba(79,195,217,0.10)" : "";
+    tr.classList.remove("graded-correct","graded-wrong");
+    document.getElementById(`log-icon-${i}`).textContent = logFlags[i] ? "●" : "";
+    document.getElementById(`log-icon-${i}`).className = "verdict-icon";
+    document.getElementById(`log-icon-${i}`).style.color = "var(--cyan)";
+  });
+  logBody.appendChild(tr);
+});
+
+// radio-style option builder
+function buildOptions(containerId, options, groupName){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  el.dataset.picked = "";
+  options.forEach(opt=>{
+    const span = document.createElement("span");
+    span.className = "radio-opt";
+    span.textContent = opt.label;
+    span.dataset.value = opt.value;
+    span.addEventListener("click", ()=>{
+      el.querySelectorAll(".radio-opt").forEach(s=>s.classList.remove("picked"));
+      span.classList.add("picked");
+      el.dataset.picked = opt.value;
+    });
+    el.appendChild(span);
+  });
+}
+
+buildOptions("attack-type-opts", [
+  {label:"Port Scan", value:"portscan"},
+  {label:"Brute Force", value:"bruteforce"},
+  {label:"SQL Injection", value:"sqli"},
+  {label:"DDoS", value:"ddos"},
+]);
+
+buildOptions("patient-zero-opts", [
+  {label:"198.51.100.9", value:"198.51.100.9"},
+  {label:"10.10.2.15 (Web Server)", value:"10.10.2.15"},
+  {label:"10.20.4.15", value:"10.20.4.15"},
+  {label:"10.20.4.22", value:"10.20.4.22"},
+]);
+
+document.getElementById("log-submit").addEventListener("click", ()=>{
+  let points = 0, total = logs.length + 2;
+
+  logs.forEach((l,i)=>{
+    const tr = logBody.children[i];
+    const icon = document.getElementById(`log-icon-${i}`);
+    const correct = logFlags[i] === l.attack;
+    if(correct) points++;
+    icon.textContent = logFlags[i] ? (correct ? "✓" : "✗") : (correct ? "" : "✗");
+    icon.className = "verdict-icon " + (correct ? "ok" : (logFlags[i] || l.attack ? "bad" : ""));
+    tr.classList.toggle("graded-correct", correct && logFlags[i]);
+    tr.classList.toggle("graded-wrong", !correct);
+  });
+
+  const atEl = document.getElementById("attack-type-opts");
+  const pzEl = document.getElementById("patient-zero-opts");
+  const atCorrect = atEl.dataset.picked === atEl.dataset.answer;
+  const pzCorrect = pzEl.dataset.picked === pzEl.dataset.answer;
+  if(atCorrect) points++;
+  if(pzCorrect) points++;
+  document.getElementById("attack-type-explain").style.display = "block";
+  document.getElementById("patient-zero-explain").style.display = "block";
+  atEl.querySelectorAll(".radio-opt").forEach(s=>{
+    if(s.dataset.value===atEl.dataset.answer) s.style.borderColor="var(--ok)";
+    else if(s.classList.contains("picked")) s.style.borderColor="var(--bad)";
+  });
+  pzEl.querySelectorAll(".radio-opt").forEach(s=>{
+    if(s.dataset.value===pzEl.dataset.answer) s.style.borderColor="var(--ok)";
+    else if(s.classList.contains("picked")) s.style.borderColor="var(--bad)";
+  });
+
+  const panel = document.getElementById("log-score");
+  panel.classList.add("visible");
+  document.getElementById("log-score-num").textContent = `${points}/${total}`;
+  document.getElementById("log-score-num").className = "score-num " + (points===total?"pass":"fail");
+  document.getElementById("log-score-msg").textContent = points===total
+    ? "Every flagged entry, the attack type, and Patient Zero all line up. That's a clean triage."
+    : "Check the highlighted rows and the two explanations below the questions — the unusual outbound beacon right after the injection attempts is the key clue.";
+});
+
+document.getElementById("log-reset").addEventListener("click", ()=>{
+  logFlags = new Array(logs.length).fill(false);
+  logs.forEach((l,i)=>{
+    const tr = logBody.children[i];
+    tr.style.background = "";
+    tr.classList.remove("graded-correct","graded-wrong");
+    document.getElementById(`log-icon-${i}`).textContent = "";
+  });
+  document.getElementById("attack-type-opts").querySelectorAll(".radio-opt").forEach(s=>{s.classList.remove("picked");s.style.borderColor="var(--line)";});
+  document.getElementById("patient-zero-opts").querySelectorAll(".radio-opt").forEach(s=>{s.classList.remove("picked");s.style.borderColor="var(--line)";});
+  document.getElementById("attack-type-opts").dataset.picked="";
+  document.getElementById("patient-zero-opts").dataset.picked="";
+  document.getElementById("attack-type-explain").style.display="none";
+  document.getElementById("patient-zero-explain").style.display="none";
+  document.getElementById("log-score").classList.remove("visible");
+});
+
+/* ================= TAB 2: DMZ PLACEMENT ================= */
+const servers = [
+  {id:"web", name:"Web Server (customer storefront)", zone:"dmz",
+   explain:"Public-facing and must accept direct inbound connections from the internet — that's exactly what the DMZ is for."},
+  {id:"mailrelay", name:"SMTP Mail Relay / Gateway", zone:"dmz",
+   explain:"It accepts inbound mail from the internet and filters it before handing off internally, so it needs to sit where the internet can reach it."},
+  {id:"dns", name:"Public DNS Server", zone:"dmz",
+   explain:"Answers external DNS queries directly from the internet, so it's public-facing like the web and mail-relay servers."},
+  {id:"db", name:"Database Server (customer records)", zone:"internal",
+   explain:"Holds sensitive data and should never be directly reachable from the internet — only the web server (via the DMZ) should reach it, through the firewall."},
+  {id:"mailbox", name:"Internal Mail Server (mailbox storage)", zone:"internal",
+   explain:"Used only by employees and never contacted directly by the internet — the DMZ mail relay handles the public-facing side."},
+  {id:"file", name:"Internal File Share", zone:"internal",
+   explain:"Staff-only resource with no reason to be exposed to the internet."},
+];
+
+let dmzPlacement = {}; // id -> zone or null
+
+function renderTray(){
+  const tray = document.getElementById("chip-tray");
+  tray.innerHTML = "";
+  servers.forEach(s=>{
+    if(dmzPlacement[s.id]) return;
+    tray.appendChild(makeChip(s));
+  });
+}
+function makeChip(s){
+  const chip = document.createElement("div");
+  chip.className = "chip";
+  chip.draggable = true;
+  chip.dataset.id = s.id;
+  chip.innerHTML = `${s.name}<div class="chip-explain">${s.explain}</div>`;
+  chip.addEventListener("dragstart", e=>{
+    e.dataTransfer.setData("text/plain", s.id);
+    setTimeout(()=>chip.style.opacity="0.4",0);
+  });
+  chip.addEventListener("dragend", ()=>{ chip.style.opacity="1"; });
+  return chip;
+}
+
+["drop-dmz","drop-internal"].forEach(dropId=>{
+  const dropEl = document.getElementById(dropId);
+  const zoneEl = dropEl.closest(".zone");
+  dropEl.addEventListener("dragover", e=>{ e.preventDefault(); zoneEl.classList.add("dragover"); });
+  dropEl.addEventListener("dragleave", ()=> zoneEl.classList.remove("dragover"));
+  dropEl.addEventListener("drop", e=>{
+    e.preventDefault();
+    zoneEl.classList.remove("dragover");
+    const id = e.dataTransfer.getData("text/plain");
+    const zone = zoneEl.dataset.zone;
+    dmzPlacement[id] = zone;
+    renderZones();
+    renderTray();
+  });
+});
+
+function renderZones(){
+  ["dmz","internal"].forEach(zone=>{
+    const container = document.getElementById(`drop-${zone}`);
+    container.innerHTML = "";
+    servers.filter(s=>dmzPlacement[s.id]===zone).forEach(s=>{
+      const chip = document.createElement("div");
+      chip.className = "chip placed";
+      chip.draggable = true;
+      chip.dataset.id = s.id;
+      chip.innerHTML = `${s.name}<div class="chip-explain">${s.explain}</div>`;
+      chip.addEventListener("dragstart", e=>{
+        e.dataTransfer.setData("text/plain", s.id);
+        setTimeout(()=>chip.style.opacity="0.4",0);
+      });
+      chip.addEventListener("dragend", ()=>{ chip.style.opacity="1"; });
+      container.appendChild(chip);
+    });
+  });
+}
+
+renderTray(); renderZones();
+
+document.getElementById("dmz-submit").addEventListener("click", ()=>{
+  let correct = 0, placed = 0;
+  servers.forEach(s=>{
+    const placedZone = dmzPlacement[s.id];
+    const chip = document.querySelector(`.chip[data-id="${s.id}"]`);
+    if(!chip) return;
+    chip.classList.add("graded");
+    if(placedZone){
+      placed++;
+      const isCorrect = placedZone === s.zone;
+      if(isCorrect) correct++;
+      chip.classList.toggle("correct", isCorrect);
+      chip.classList.toggle("wrong", !isCorrect);
+    }
+  });
+  const panel = document.getElementById("dmz-score");
+  panel.classList.add("visible");
+  document.getElementById("dmz-score-num").textContent = `${correct}/${servers.length}`;
+  document.getElementById("dmz-score-num").className = "score-num " + (correct===servers.length?"pass":"fail");
+  const missing = servers.length - placed;
+  document.getElementById("dmz-score-msg").textContent = missing>0
+    ? `${missing} server(s) still sitting in the tray — an unplaced server is effectively "not deployed" for grading purposes. Drag them into a zone, then resubmit.`
+    : (correct===servers.length ? "Correct segmentation: public-facing services in the DMZ, everything sensitive or staff-only kept internal." : "A few placements need a second look — expand each card below for the reasoning.");
+});
+
+document.getElementById("dmz-reset").addEventListener("click", ()=>{
+  dmzPlacement = {};
+  renderTray(); renderZones();
+  document.getElementById("dmz-score").classList.remove("visible");
+});
+
+/* ================= TAB 3: IR SEQUENCING ================= */
+const irStepsCorrectOrder = [
+  {id:"prep1", text:"Develop and document an incident response plan, and train staff on it.", phase:"Preparation"},
+  {id:"prep2", text:"Deploy IDS/IPS and enable comprehensive logging across critical assets.", phase:"Preparation"},
+  {id:"det1", text:"SOC analyst reviews an anomalous alert and confirms it's a true positive.", phase:"Detection & Analysis"},
+  {id:"det2", text:"Determine the scope and root cause of the incident.", phase:"Detection & Analysis"},
+  {id:"con1", text:"Isolate the affected host(s) from the network to stop the spread.", phase:"Containment"},
+  {id:"con2", text:"Remove the malware and close the vulnerability that was exploited.", phase:"Eradication"},
+  {id:"con3", text:"Restore affected systems from clean backups and monitor for reinfection.", phase:"Recovery"},
+  {id:"post1", text:"Conduct a lessons-learned review and update the IR plan.", phase:"Post-Incident Activity"},
+];
+
+let irOrder = shuffle([...irStepsCorrectOrder]);
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  // avoid accidentally starting already-correct
+  if(JSON.stringify(arr)===JSON.stringify(irStepsCorrectOrder)){ [arr[0],arr[1]]=[arr[1],arr[0]]; }
+  return arr;
+}
+
+let dragSrcIdx = null;
+function renderIrList(){
+  const ul = document.getElementById("ir-list");
+  ul.innerHTML = "";
+  irOrder.forEach((step,i)=>{
+    const li = document.createElement("li");
+    li.draggable = true;
+    li.dataset.id = step.id;
+    li.innerHTML = `<span class="handle">⠿</span><span class="step-num">${i+1}.</span><span class="step-text">${step.text}</span><span class="step-phase">${step.phase}</span>`;
+    li.addEventListener("dragstart", e=>{
+      dragSrcIdx = i;
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+    li.addEventListener("dragover", e=>{
+      e.preventDefault();
+      const targetIdx = i;
+      if(dragSrcIdx===null || dragSrcIdx===targetIdx) return;
+      const moved = irOrder.splice(dragSrcIdx,1)[0];
+      irOrder.splice(targetIdx,0,moved);
+      dragSrcIdx = targetIdx;
+      renderIrList();
+    });
+    ul.appendChild(li);
+  });
+}
+renderIrList();
+
+document.getElementById("ir-submit").addEventListener("click", ()=>{
+  let correct = 0;
+  const ul = document.getElementById("ir-list");
+  irOrder.forEach((step,i)=>{
+    const li = ul.children[i];
+    li.classList.add("graded");
+    const isCorrect = irStepsCorrectOrder[i].id === step.id;
+    if(isCorrect) correct++;
+    li.classList.toggle("graded-correct", isCorrect);
+    li.classList.toggle("graded-wrong", !isCorrect);
+  });
+  const panel = document.getElementById("ir-score");
+  panel.classList.add("visible");
+  document.getElementById("ir-score-num").textContent = `${correct}/${irOrder.length}`;
+  document.getElementById("ir-score-num").className = "score-num " + (correct===irOrder.length?"pass":"fail");
+  document.getElementById("ir-score-msg").textContent = correct===irOrder.length
+    ? "Full lifecycle in order: Preparation, Detection & Analysis, Containment/Eradication/Recovery, then Post-Incident Activity."
+    : "Rows marked in red are out of place. The phase tag on the right shows which stage each step belongs to — use that to re-sort and try again.";
+});
+
+document.getElementById("ir-reset").addEventListener("click", ()=>{
+  irOrder = shuffle([...irStepsCorrectOrder]);
+  renderIrList();
+  document.getElementById("ir-score").classList.remove("visible");
+});
+
+/* ================= TAB 4: IAM / MDM ================= */
+const protoScenarios = [
+  {q:"Employees click a link on the HR portal and land on the cloud payroll app already signed in, using their corporate identity — no second password prompt.",
+   options:[{label:"SAML",value:"saml"},{label:"RADIUS",value:"radius"},{label:"Kerberos",value:"kerberos"},{label:"OAuth",value:"oauth"}],
+   answer:"saml",
+   explain:"Browser-based federated single sign-on into a separate cloud application, using an identity asserted by the corporate IdP, is the textbook SAML use case."},
+  {q:"A budgeting app the user installed asks to read (not modify) their bank transaction history, without ever seeing their bank password.",
+   options:[{label:"SAML",value:"saml"},{label:"OAuth",value:"oauth"},{label:"RADIUS",value:"radius"},{label:"Kerberos",value:"kerberos"}],
+   answer:"oauth",
+   explain:"Delegated, scoped authorization to a third-party app — access without sharing the credential — is what OAuth is built for."},
+  {q:"Remote employees connect to the VPN concentrator, which checks their credentials against a central AAA server before granting network access.",
+   options:[{label:"Kerberos",value:"kerberos"},{label:"SAML",value:"saml"},{label:"RADIUS",value:"radius"},{label:"OAuth",value:"oauth"}],
+   answer:"radius",
+   explain:"Centralized authentication, authorization, and accounting for network access devices (VPN concentrators, switches, wireless controllers) is RADIUS's core job."},
+  {q:"Staff log in once at their workstation each morning and can then access internal file shares and email without re-entering a password all day.",
+   options:[{label:"OAuth",value:"oauth"},{label:"RADIUS",value:"radius"},{label:"Kerberos",value:"kerberos"},{label:"SAML",value:"saml"}],
+   answer:"kerberos",
+   explain:"Ticket-based single sign-on within a Windows/AD-style internal network is Kerberos: a ticket-granting ticket lets the user access multiple internal services without re-authenticating."},
+];
+
+const mdmScenarios = [
+  {q:"A corporate-owned laptop with no personal data on it is reported stolen.",
+   options:[{label:"Full device wipe",value:"full"},{label:"Selective/container wipe",value:"selective"}],
+   answer:"full",
+   explain:"It's company-owned with nothing personal to protect, so a full wipe is the clean, low-risk response."},
+  {q:"An employee's personal phone, enrolled in BYOD with a secured corporate container, is lost.",
+   options:[{label:"Full device wipe",value:"full"},{label:"Selective/container wipe",value:"selective"}],
+   answer:"selective",
+   explain:"Wiping the whole device would destroy the employee's personal photos, apps, and data. A selective/container wipe removes only the corporate workspace."},
+  {q:"An employee is terminated. They accessed corporate email only through a container app on their personal tablet.",
+   options:[{label:"Full device wipe",value:"full"},{label:"Selective/container wipe",value:"selective"}],
+   answer:"selective",
+   explain:"Same logic as offboarding any BYOD device — remove company data and access, leave the employee's personal device and data intact."},
+];
+
+function buildQBlock(containerId, scenarios, groupPrefix){
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  scenarios.forEach((s,i)=>{
+    const block = document.createElement("div");
+    block.className = "qblock";
+    block.dataset.answer = s.answer;
+    block.dataset.picked = "";
+    const qrow = document.createElement("div");
+    qrow.className = "qrow";
+    s.options.forEach(opt=>{
+      const span = document.createElement("span");
+      span.className = "radio-opt";
+      span.textContent = opt.label;
+      span.dataset.value = opt.value;
+      span.addEventListener("click", ()=>{
+        qrow.querySelectorAll(".radio-opt").forEach(o=>o.classList.remove("picked"));
+        span.classList.add("picked");
+        block.dataset.picked = opt.value;
+      });
+      qrow.appendChild(span);
+    });
+    block.innerHTML = `<div class="qtext">${s.q}</div>`;
+    block.appendChild(qrow);
+    const explainDiv = document.createElement("div");
+    explainDiv.className = "explain";
+    explainDiv.textContent = s.explain;
+    block.appendChild(explainDiv);
+    container.appendChild(block);
+  });
+}
+buildQBlock("iam-proto-block", protoScenarios, "proto");
+buildQBlock("iam-mdm-block", mdmScenarios, "mdm");
+
+document.getElementById("iam-submit").addEventListener("click", ()=>{
+  let correct = 0, total = 0;
+  document.querySelectorAll("#iam-proto-block .qblock, #iam-mdm-block .qblock").forEach(block=>{
+    total++;
+    const isCorrect = block.dataset.picked === block.dataset.answer;
+    if(isCorrect) correct++;
+    block.querySelectorAll(".radio-opt").forEach(o=>{
+      o.style.borderColor = o.dataset.value===block.dataset.answer ? "var(--ok)" : (o.classList.contains("picked") ? "var(--bad)" : "var(--line)");
+    });
+    block.querySelector(".explain").style.display = "block";
+  });
+  const panel = document.getElementById("iam-score");
+  panel.classList.add("visible");
+  document.getElementById("iam-score-num").textContent = `${correct}/${total}`;
+  document.getElementById("iam-score-num").className = "score-num " + (correct===total?"pass":"fail");
+  document.getElementById("iam-score-msg").textContent = correct===total
+    ? "All matched correctly — notice the pattern: who's proving identity to whom, and whether a password ever gets shared, is usually enough to pick the right protocol."
+    : "Check each card's explanation — the key details (federated SSO vs. delegated access vs. network AAA vs. internal ticketing, or corporate-owned vs. BYOD) are what distinguish the right answer.";
+});
+
+document.getElementById("iam-reset").addEventListener("click", ()=>{
+  document.querySelectorAll("#iam-proto-block .qblock, #iam-mdm-block .qblock").forEach(block=>{
+    block.dataset.picked = "";
+    block.querySelectorAll(".radio-opt").forEach(o=>{o.classList.remove("picked"); o.style.borderColor="var(--line)";});
+    block.querySelector(".explain").style.display = "none";
+  });
+  document.getElementById("iam-score").classList.remove("visible");
+});
+</script>
+</body>
+</html>
