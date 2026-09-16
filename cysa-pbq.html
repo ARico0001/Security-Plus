@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CySA+ PBQ Suite</title>
+<style>
+  :root{
+    --bg:#0d1321; --panel:#141d2f; --panel-2:#1a2540; --line:#2a3654;
+    --text:#dbe4f5; --muted:#8496b8; --amber:#e8a33d; --cyan:#4fc3d9;
+    --ok:#4caf7d; --bad:#d9635a; --violet:#a78bda;
+    --mono:'Consolas','SFMono-Regular','Menlo',monospace; --sans:'Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:26px 16px 60px;}
+  .wrap{max-width:960px;margin:0 auto;}
+
+  .banner{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));border-radius:6px;padding:18px 22px;margin-bottom:18px;}
+  .banner .tag{font-family:var(--mono);font-size:12px;color:var(--amber);}
+  .banner h1{margin:6px 0 6px;font-size:21px;font-weight:600;color:#fff;}
+  .banner p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
+
+  .pbq-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .pbq-nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:7px 12px;}
+  .pbq-nav a:hover{border-color:var(--cyan);color:var(--cyan);}
+  .pbq-nav a.current{color:var(--amber);border-color:var(--amber);}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:0;}
+  .tab-btn{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;padding:10px 14px;cursor:pointer;border-radius:6px 6px 0 0;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--cyan);background:var(--panel);border-color:var(--line);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .scenario{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:4px;padding:15px 18px;margin-bottom:20px;font-size:14px;line-height:1.6;}
+  .scenario strong{color:var(--cyan);}
+  .task-label{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 0 10px 2px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:18px;}
+  thead th{text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--panel-2);}
+  tbody td{padding:9px 10px;font-family:var(--mono);font-size:12.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.graded-correct{background:rgba(76,175,125,0.08);}
+  tbody tr.graded-wrong{background:rgba(217,99,90,0.10);}
+  tbody tr.flag-row{cursor:pointer;}
+  tbody tr.flag-row:hover{background:rgba(255,255,255,0.02);}
+
+  select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-family:var(--mono);font-size:12.5px;min-width:110px;}
+  select:focus{outline:1px solid var(--cyan);}
+
+  .explain{display:none;font-family:var(--sans);font-size:12px;color:var(--muted);line-height:1.5;padding-top:3px;}
+  tr.show-explain .explain{display:block;}
+  .verdict-icon{display:inline-block;width:14px;font-family:var(--mono);font-weight:700;}
+  .verdict-icon.ok{color:var(--ok);} .verdict-icon.bad{color:var(--bad);}
+
+  .controls{display:flex;gap:10px;margin:4px 0 8px;flex-wrap:wrap;}
+  button.act{font-family:var(--sans);font-size:14px;font-weight:600;padding:10px 18px;border-radius:4px;border:1px solid transparent;cursor:pointer;}
+  .btn-primary{background:var(--amber);color:#1a1300;}
+  .btn-primary:hover{background:#f0ae4d;}
+  .btn-ghost{background:transparent;color:var(--text);border-color:var(--line);}
+  .btn-ghost:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  .score-panel{display:none;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:16px 20px;margin-top:14px;}
+  .score-panel.visible{display:block;}
+  .score-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .score-num{font-family:var(--mono);font-size:24px;font-weight:700;}
+  .score-num.pass{color:var(--ok);} .score-num.fail{color:var(--bad);}
+  .score-sub{color:var(--muted);font-size:12.5px;}
+  .score-msg{font-size:13.5px;color:var(--text);margin-top:6px;line-height:1.5;}
+
+  .qblock{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;}
+  .qblock .qtext{font-size:13.5px;line-height:1.55;margin-bottom:10px;}
+  .qblock .qrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .radio-opt{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer;}
+  .radio-opt:hover{border-color:var(--cyan);}
+  .radio-opt.picked{border-color:var(--cyan);color:var(--cyan);}
+  .qblock .explain{padding-top:8px;border-top:1px dashed var(--line);margin-top:10px;}
+
+  .sortable{list-style:none;margin:0 0 16px;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .sortable li{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;cursor:grab;background:var(--panel);}
+  .sortable li:last-child{border-bottom:none;}
+  .sortable li.dragging{opacity:0.4;}
+  .sortable li .handle{color:var(--muted);font-family:var(--mono);}
+  .sortable li .step-num{font-family:var(--mono);color:var(--muted);width:18px;flex-shrink:0;}
+  .sortable li .step-tag{display:none;font-size:11px;color:var(--cyan);font-family:var(--mono);margin-left:auto;flex-shrink:0;}
+  .sortable li.graded-correct{border-left:3px solid var(--ok);}
+  .sortable li.graded-wrong{border-left:3px solid var(--bad);}
+  .sortable li.graded .step-tag{display:inline;}
+
+  .footnote{font-size:12px;color:var(--muted);margin-top:26px;border-top:1px solid var(--line);padding-top:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="pbq-nav">
+    <a href="index.html">← All PBQs</a>
+    <a href="cysa-pbq-suite.html#vuln" class="current" data-panel-link="vuln">1 · Vulnerability Mgmt</a>
+    <a href="cysa-pbq-suite.html#secops" data-panel-link="secops">2 · Security Operations</a>
+    <a href="cysa-pbq-suite.html#ir" data-panel-link="ir">3 · Incident Response</a>
+    <a href="cysa-pbq-suite.html#report" data-panel-link="report">4 · Reporting</a>
+  </nav>
+
+  <div class="banner">
+    <div class="tag">PBQ SIMULATOR SUITE · CS0-003 PRACTICE</div>
+    <h1>CySA+ Performance-Based Question Practice — All 4 Domains</h1>
+    <p>One tab per exam domain: Vulnerability Management, Security Operations, Incident Response &amp; Management, and Reporting &amp; Communication. All scenarios follow the same fictional incident at Solstice Financial.</p>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-panel="vuln">1 · Vulnerability Mgmt</button>
+    <button class="tab-btn" data-panel="secops">2 · Security Operations</button>
+    <button class="tab-btn" data-panel="ir">3 · Incident Response</button>
+    <button class="tab-btn" data-panel="report">4 · Reporting</button>
+  </div>
+
+  <!-- ============ TAB 1: VULNERABILITY MANAGEMENT ============ -->
+  <div class="panel active" id="panel-vuln">
+    <div class="scenario">
+      Solstice Financial's quarterly vulnerability scan is in. For each finding, weigh the <strong>CVSS score</strong>, whether an <strong>exploit is available</strong>, the asset's <strong>exposure and business criticality</strong>, and any <strong>compensating controls</strong> already noted — then assign the right remediation priority. A high CVSS score alone doesn't always mean "patch immediately," and a lower score doesn't always mean it can wait.
+    </div>
+
+    <p class="task-label">VULNERABILITY SCAN FINDINGS — set a priority for each</p>
+    <table id="vuln-table">
+      <thead><tr><th style="width:22px"></th><th>Asset</th><th>Finding</th><th>CVSS</th><th>Notes</th><th style="width:190px">Priority</th></tr></thead>
+      <tbody id="vuln-body"></tbody>
+    </table>
+
+    <div class="controls">
+      <button class="act btn-primary" id="vuln-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="vuln-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="vuln-score">
+      <div class="score-head"><span class="score-num" id="vuln-score-num">0/0</span><span class="score-sub">correct</span></div>
+      <div class="score-msg" id="vuln-score-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 2: SECURITY OPERATIONS ============ -->
+  <div class="panel" id="panel-secops">
+    <div class="scenario">
+      Solstice Financial's SIEM has surfaced unusual DNS activity from a workstation, followed by an SMB connection and remote process creation on a database host. Review the log excerpt, flag every entry that's part of the attack, then answer the questions below.
+    </div>
+
+    <p class="task-label">SIEM / EDR LOG EXCERPT — click a row to flag it</p>
+    <table id="secops-table">
+      <thead><tr><th style="width:22px"></th><th>Time</th><th>Source</th><th>Destination</th><th>Event</th></tr></thead>
+      <tbody id="secops-body"></tbody>
+    </table>
+
+    <div class="qblock">
+      <div class="qtext">What do the repeated, long encoded-subdomain DNS queries to <strong>baddomain.net</strong> indicate?</div>
+      <div class="qrow" id="q-dns-opts" data-answer="tunneling"></div>
+      <div class="explain" id="q-dns-explain">Long, randomized/encoded subdomains queried repeatedly against one external domain is the classic signature of DNS tunneling — data is being smuggled out inside DNS queries, a channel that's often allowed through the firewall by default.</div>
+    </div>
+
+    <div class="qblock">
+      <div class="qtext">What best describes the SMB admin$ connection and remote process creation between WKS-114 and FIN-DB-02?</div>
+      <div class="qrow" id="q-lateral-opts" data-answer="lateral"></div>
+      <div class="explain" id="q-lateral-explain">An admin-share connection immediately followed by a remotely spawned process, between two hosts that have never talked before, is the signature of lateral movement (PsExec-style remote execution) — the attacker pivoting from the first compromised host deeper into the network.</div>
+    </div>
+
+    <div class="qblock">
+      <div class="qtext">Which host is the original point of compromise, responsible for both the tunneling and the pivot?</div>
+      <div class="qrow" id="q-source-opts" data-answer="WKS-114"></div>
+      <div class="explain" id="q-source-explain">WKS-114 is the first host seen tunneling data out, and it's also the source of the SMB connection into FIN-DB-02 — everything else follows from that one machine.</div>
+    </div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="secops-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="secops-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="secops-score">
+      <div class="score-head"><span class="score-num" id="secops-score-num">0/0</span><span class="score-sub">points</span></div>
+      <div class="score-msg" id="secops-score-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 3: INCIDENT RESPONSE & MANAGEMENT ============ -->
+  <div class="panel" id="panel-ir">
+    <div class="scenario">
+      Forensics is now involved. First, order these evidence sources by <strong>volatility</strong> — most volatile (lost first if the system stays powered on) to least volatile — so responders know what to collect first. Then answer three short questions about preserving evidence properly.
+    </div>
+
+    <p class="task-label">PART A — DRAG TO ORDER, MOST VOLATILE FIRST</p>
+    <ul class="sortable" id="volatility-list"></ul>
+
+    <div class="controls">
+      <button class="act btn-primary" id="vol-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="vol-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="vol-score">
+      <div class="score-head"><span class="score-num" id="vol-score-num">0/0</span><span class="score-sub">in correct position</span></div>
+      <div class="score-msg" id="vol-score-msg"></div>
+    </div>
+
+    <p class="task-label" style="margin-top:24px;">PART B — EVIDENCE HANDLING</p>
+    <div id="forensics-block"></div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="forensics-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="forensics-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="forensics-score">
+      <div class="score-head"><span class="score-num" id="forensics-score-num">0/0</span><span class="score-sub">correct</span></div>
+      <div class="score-msg" id="forensics-score-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 4: REPORTING & COMMUNICATION ============ -->
+  <div class="panel" id="panel-report">
+    <div class="scenario">
+      The incident is contained. Now it has to be communicated — to the right people, in the right form. Match each situation to who needs to hear it or what it's measuring.
+    </div>
+
+    <p class="task-label">PART A — WHO GETS TOLD?</p>
+    <div id="stakeholder-block"></div>
+
+    <p class="task-label" style="margin-top:22px;">PART B — NAME THE METRIC</p>
+    <div id="metrics-block"></div>
+
+    <div class="controls">
+      <button class="act btn-primary" id="report-submit">Submit for grading</button>
+      <button class="act btn-ghost" id="report-reset">Reset</button>
+    </div>
+    <div class="score-panel" id="report-score">
+      <div class="score-head"><span class="score-num" id="report-score-num">0/0</span><span class="score-sub">correct</span></div>
+      <div class="score-msg" id="report-score-msg"></div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    Practice simulations modeled on the interaction styles CompTIA describes for CySA+ PBQs (scan triage, log review, ordered ranking, matching) — not official CompTIA items or pulled from the real exam bank. All four tabs follow one continuous incident at a fictional company, start to finish.
+  </div>
+
+</div>
+
+<script>
+/* ---------- TAB SWITCHING ---------- */
+function activatePanel(name){
+  const valid = ["vuln","secops","ir","report"];
+  if(!valid.includes(name)) name = "vuln";
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.panel===name));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.id==="panel-"+name));
+  document.querySelectorAll(".pbq-nav a[data-panel-link]").forEach(a=>a.classList.toggle("current", a.dataset.panelLink===name));
+}
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    history.replaceState(null,"","#"+btn.dataset.panel);
+    activatePanel(btn.dataset.panel);
+  });
+});
+window.addEventListener("hashchange", ()=> activatePanel(location.hash.replace("#","")));
+activatePanel(location.hash.replace("#",""));
+
+/* shared radio-option builder */
+function buildOptions(containerId, options){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  el.dataset.picked = "";
+  options.forEach(opt=>{
+    const span = document.createElement("span");
+    span.className = "radio-opt";
+    span.textContent = opt.label;
+    span.dataset.value = opt.value;
+    span.addEventListener("click", ()=>{
+      el.querySelectorAll(".radio-opt").forEach(s=>s.classList.remove("picked"));
+      span.classList.add("picked");
+      el.dataset.picked = opt.value;
+    });
+    el.appendChild(span);
+  });
+}
+
+/* ================= TAB 1: VULNERABILITY MANAGEMENT ================= */
+const vulns = [
+  {asset:"Public Web Server (10.10.2.15)", finding:"Apache Struts RCE", cvss:"9.8 Critical",
+   notes:"Internet-facing; processes cardholder payment data. Public exploit module exists.",
+   correct:"patch-now",
+   explain:"Critical severity, a working public exploit, internet-facing, and handling payment data — every factor points to immediate patching."},
+  {asset:"Internal HR File Server", finding:"SMBv1 enabled (EternalBlue-class RCE)", cvss:"9.8 Critical",
+   notes:"Internal only, but reachable from the general employee VLAN with no segmentation. Worm-capable exploit (WannaCry-class).",
+   correct:"patch-now",
+   explain:"\"Internal only\" isn't a mitigating control by itself — this vulnerability class self-propagates across a flat network. Reachability from a broad VLAN plus a wormable exploit means immediate patching, not a lower priority."},
+  {asset:"Isolated Lab Workstation", finding:"Outdated OpenSSL", cvss:"7.5 High",
+   notes:"No network connectivity beyond an air-gapped lab VLAN; scheduled for decommission next month.",
+   correct:"accept-risk",
+   explain:"High CVSS, but the asset is genuinely isolated and about to be retired — documenting the compensating control (isolation) and accepting the residual risk until decommission is reasonable here."},
+  {asset:"Marketing Website (static content)", finding:"TLS supports a weak cipher", cvss:"5.3 Medium",
+   notes:"No sensitive data handled; informational content only. No known exploit.",
+   correct:"next-cycle",
+   explain:"Medium severity, no exploit in the wild, and no sensitive data at stake — fix it in the normal patch cycle rather than treating it as an emergency."},
+  {asset:"Core Database Server (10.10.2.30)", finding:"Scanner flagged possible SQL injection parameter", cvss:"N/A pending review",
+   notes:"Manual review shows the flagged parameter is a hard-coded internal report ID passed only by a trusted service account, not user input.",
+   correct:"false-positive",
+   explain:"Automated scanners flag input patterns without always confirming the input is attacker-controllable. Manual validation here shows there's no actual user-supplied input — this is a false positive, not a real finding to remediate."},
+  {asset:"Print Server", finding:"Default administrator credentials still active", cvss:"9.8 Critical",
+   notes:"Reachable from the general office network; credentials for this printer model are published in the vendor manual.",
+   correct:"patch-now",
+   explain:"Trivial, publicly documented exploitation path plus broad network reachability makes this urgent even though it's \"just a printer\" — printers are a common initial-access foothold."},
+  {asset:"Legacy Accounting App Server", finding:"Unsupported/EOL operating system, multiple unpatched CVEs", cvss:"Multiple, several Critical",
+   notes:"Business-critical; vendor confirms the app cannot run on a newer OS. Network team has placed it behind a dedicated firewall segment, reachable only from a single hardened jump host.",
+   correct:"accept-risk",
+   explain:"Patching isn't possible and replacing the app isn't immediate, but real compensating controls (segmentation, single jump-host access) are documented and in place — this is a textbook case for formally accepting residual risk rather than ignoring or over-escalating it."},
+];
+
+const vulnBody = document.getElementById("vuln-body");
+const priorityOptions = [
+  {v:"", label:"— choose —"},
+  {v:"patch-now", label:"Patch Immediately"},
+  {v:"next-cycle", label:"Patch Next Cycle"},
+  {v:"accept-risk", label:"Accept Risk / Compensating Control"},
+  {v:"false-positive", label:"False Positive — No Action"},
+];
+vulns.forEach((v,i)=>{
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><span class="verdict-icon" id="vuln-icon-${i}"></span></td>
+    <td>${v.asset}</td>
+    <td>${v.finding}</td>
+    <td>${v.cvss}</td>
+    <td style="max-width:220px;white-space:normal;">${v.notes}</td>
+    <td>
+      <select id="vuln-sel-${i}">
+        ${priorityOptions.map(o=>`<option value="${o.v}">${o.label}</option>`).join("")}
+      </select>
+    </td>`;
+  vulnBody.appendChild(tr);
+  const explainRow = document.createElement("tr");
+  explainRow.innerHTML = `<td colspan="6"><div class="explain" id="vuln-explain-${i}">${v.explain}</div></td>`;
+  vulnBody.appendChild(explainRow);
+});
+
+document.getElementById("vuln-submit").addEventListener("click", ()=>{
+  let correct = 0, unanswered = 0;
+  vulns.forEach((v,i)=>{
+    const sel = document.getElementById(`vuln-sel-${i}`);
+    const row = sel.closest("tr");
+    const icon = document.getElementById(`vuln-icon-${i}`);
+    const explainDiv = document.getElementById(`vuln-explain-${i}`);
+    if(!sel.value){ unanswered++; return; }
+    const isCorrect = sel.value === v.correct;
+    if(isCorrect) correct++;
+    icon.textContent = isCorrect ? "✓" : "✗";
+    icon.className = "verdict-icon " + (isCorrect ? "ok" : "bad");
+    row.classList.toggle("graded-correct", isCorrect);
+    row.classList.toggle("graded-wrong", !isCorrect);
+    explainDiv.closest("tr").classList.add("show-explain");
+  });
+  const panel = document.getElementById("vuln-score");
+  panel.classList.add("visible");
+  document.getElementById("vuln-score-num").textContent = `${correct}/${vulns.length}`;
+  document.getElementById("vuln-score-num").className = "score-num " + (correct===vulns.length?"pass":"fail");
+  document.getElementById("vuln-score-msg").textContent = unanswered>0
+    ? `${unanswered} finding(s) left unset — set a priority for every row, then resubmit.`
+    : (correct===vulns.length ? "Every priority call matches CVSS, exploitability, exposure, and compensating controls working together." : "Check the highlighted rows — the explanation under each shows which factor tipped the decision.");
+});
+document.getElementById("vuln-reset").addEventListener("click", ()=>{
+  vulns.forEach((v,i)=>{
+    document.getElementById(`vuln-sel-${i}`).value = "";
+    document.getElementById(`vuln-icon-${i}`).textContent = "";
+    const row = document.getElementById(`vuln-sel-${i}`).closest("tr");
+    row.classList.remove("graded-correct","graded-wrong");
+    document.getElementById(`vuln-explain-${i}`).closest("tr").classList.remove("show-explain");
+  });
+  document.getElementById("vuln-score").classList.remove("visible");
+});
+
+/* ================= TAB 2: SECURITY OPERATIONS ================= */
+const secopsLogs = [
+  {time:"10:02:01", src:"WKS-114", dst:"8.8.8.8:53", event:"DNS query: mail.solsticefinancial.com", attack:false},
+  {time:"10:02:03", src:"WKS-114", dst:"203.0.113.55:53", event:"DNS query: a1b2c3d4e5f6a7b8.xfil.baddomain.net", attack:true},
+  {time:"10:02:04", src:"WKS-114", dst:"203.0.113.55:53", event:"DNS query: 9f8e7d6c5b4a3c2d.xfil.baddomain.net", attack:true},
+  {time:"10:02:06", src:"WKS-114", dst:"203.0.113.55:53", event:"DNS query: 44ffeeaa22335566.xfil.baddomain.net", attack:true},
+  {time:"10:05:11", src:"WKS-114", dst:"FIN-DB-02:445", event:"SMB ADMIN$ share connection — first time seen between these hosts", attack:true},
+  {time:"10:05:12", src:"FIN-DB-02", dst:"FIN-DB-02", event:"New process spawned via remote service creation (PsExec-style)", attack:true},
+  {time:"10:06:40", src:"WKS-227", dst:"172.16.4.10:443", event:"HTTPS request to internal payroll portal", attack:false},
+  {time:"10:07:02", src:"FIN-DB-02", dst:"203.0.113.55:53", event:"DNS query: 7788aabbccdd0011.xfil.baddomain.net", attack:true},
+  {time:"10:08:15", src:"WKS-330", dst:"172.16.4.20:389", event:"LDAP bind, standard employee authentication", attack:false},
+];
+const secopsBody = document.getElementById("secops-body");
+let secopsFlags = new Array(secopsLogs.length).fill(false);
+secopsLogs.forEach((l,i)=>{
+  const tr = document.createElement("tr");
+  tr.className = "flag-row";
+  tr.innerHTML = `<td><span class="verdict-icon" id="secops-icon-${i}"></span></td><td>${l.time}</td><td>${l.src}</td><td>${l.dst}</td><td>${l.event}</td>`;
+  tr.addEventListener("click", ()=>{
+    secopsFlags[i] = !secopsFlags[i];
+    tr.style.background = secopsFlags[i] ? "rgba(79,195,217,0.10)" : "";
+    tr.classList.remove("graded-correct","graded-wrong");
+    const icon = document.getElementById(`secops-icon-${i}`);
+    icon.textContent = secopsFlags[i] ? "●" : "";
+    icon.className = "verdict-icon";
+    icon.style.color = "var(--cyan)";
+  });
+  secopsBody.appendChild(tr);
+});
+
+buildOptions("q-dns-opts", [
+  {label:"Port Scan", value:"portscan"},
+  {label:"DNS Tunneling / Exfiltration", value:"tunneling"},
+  {label:"Brute Force", value:"bruteforce"},
+  {label:"DDoS", value:"ddos"},
+]);
+buildOptions("q-lateral-opts", [
+  {label:"Privilege Escalation (local)", value:"privesc"},
+  {label:"Lateral Movement", value:"lateral"},
+  {label:"Phishing", value:"phishing"},
+  {label:"DNS Tunneling", value:"tunneling"},
+]);
+buildOptions("q-source-opts", [
+  {label:"FIN-DB-02", value:"FIN-DB-02"},
+  {label:"WKS-114", value:"WKS-114"},
+  {label:"WKS-227", value:"WKS-227"},
+  {label:"WKS-330", value:"WKS-330"},
+]);
+
+document.getElementById("secops-submit").addEventListener("click", ()=>{
+  let points = 0, total = secopsLogs.length + 3;
+  secopsLogs.forEach((l,i)=>{
+    const tr = secopsBody.children[i];
+    const icon = document.getElementById(`secops-icon-${i}`);
+    const correct = secopsFlags[i] === l.attack;
+    if(correct) points++;
+    icon.textContent = secopsFlags[i] ? (correct ? "✓" : "✗") : (correct ? "" : "✗");
+    icon.className = "verdict-icon " + (correct ? "ok" : (secopsFlags[i] || l.attack ? "bad" : ""));
+    tr.classList.toggle("graded-correct", correct && secopsFlags[i]);
+    tr.classList.toggle("graded-wrong", !correct);
+  });
+  [["q-dns-opts","q-dns-explain"],["q-lateral-opts","q-lateral-explain"],["q-source-opts","q-source-explain"]].forEach(([oid,eid])=>{
+    const el = document.getElementById(oid);
+    const isCorrect = el.dataset.picked === el.dataset.answer;
+    if(isCorrect) points++;
+    document.getElementById(eid).style.display = "block";
+    el.querySelectorAll(".radio-opt").forEach(s=>{
+      if(s.dataset.value===el.dataset.answer) s.style.borderColor="var(--ok)";
+      else if(s.classList.contains("picked")) s.style.borderColor="var(--bad)";
+    });
+  });
+  const panel = document.getElementById("secops-score");
+  panel.classList.add("visible");
+  document.getElementById("secops-score-num").textContent = `${points}/${total}`;
+  document.getElementById("secops-score-num").className = "score-num " + (points===total?"pass":"fail");
+  document.getElementById("secops-score-msg").textContent = points===total
+    ? "Correctly separated the DNS tunneling from the lateral movement, and traced both back to WKS-114 as patient zero."
+    : "Check the flagged rows and the three explanations below the log — the two attack techniques happen back to back on the same host.";
+});
+document.getElementById("secops-reset").addEventListener("click", ()=>{
+  secopsFlags = new Array(secopsLogs.length).fill(false);
+  secopsLogs.forEach((l,i)=>{
+    const tr = secopsBody.children[i];
+    tr.style.background = "";
+    tr.classList.remove("graded-correct","graded-wrong");
+    document.getElementById(`secops-icon-${i}`).textContent = "";
+  });
+  ["q-dns-opts","q-lateral-opts","q-source-opts"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.dataset.picked = "";
+    el.querySelectorAll(".radio-opt").forEach(s=>{s.classList.remove("picked");s.style.borderColor="var(--line)";});
+  });
+  ["q-dns-explain","q-lateral-explain","q-source-explain"].forEach(id=> document.getElementById(id).style.display="none");
+  document.getElementById("secops-score").classList.remove("visible");
+});
+
+/* ================= TAB 3: INCIDENT RESPONSE — ORDER OF VOLATILITY ================= */
+const volatilityCorrectOrder = [
+  {id:"reg", text:"CPU registers and cache"},
+  {id:"kernel", text:"Routing table, ARP cache, process table, kernel statistics"},
+  {id:"ram", text:"RAM (system memory)"},
+  {id:"swap", text:"Temporary file systems / swap space"},
+  {id:"disk", text:"Disk (hard drive data)"},
+  {id:"remote", text:"Remote logging and monitoring data (SIEM/syslog)"},
+  {id:"topo", text:"Physical configuration and network topology"},
+  {id:"archive", text:"Archival media / backup tapes"},
+];
+let volOrder = shuffleArr([...volatilityCorrectOrder]);
+function shuffleArr(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  if(JSON.stringify(arr)===JSON.stringify(volatilityCorrectOrder)){ [arr[0],arr[1]]=[arr[1],arr[0]]; }
+  return arr;
+}
+let volDragSrcIdx = null;
+function renderVolList(){
+  const ul = document.getElementById("volatility-list");
+  ul.innerHTML = "";
+  volOrder.forEach((step,i)=>{
+    const li = document.createElement("li");
+    li.draggable = true;
+    li.dataset.id = step.id;
+    li.innerHTML = `<span class="handle">⠿</span><span class="step-num">${i+1}.</span><span class="step-text">${step.text}</span><span class="step-tag">correct rank: ${volatilityCorrectOrder.findIndex(s=>s.id===step.id)+1}</span>`;
+    li.addEventListener("dragstart", e=>{ volDragSrcIdx = i; li.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; });
+    li.addEventListener("dragend", ()=> li.classList.remove("dragging"));
+    li.addEventListener("dragover", e=>{
+      e.preventDefault();
+      if(volDragSrcIdx===null || volDragSrcIdx===i) return;
+      const moved = volOrder.splice(volDragSrcIdx,1)[0];
+      volOrder.splice(i,0,moved);
+      volDragSrcIdx = i;
+      renderVolList();
+    });
+    ul.appendChild(li);
+  });
+}
+renderVolList();
+
+document.getElementById("vol-submit").addEventListener("click", ()=>{
+  let correct = 0;
+  const ul = document.getElementById("volatility-list");
+  volOrder.forEach((step,i)=>{
+    const li = ul.children[i];
+    li.classList.add("graded");
+    const isCorrect = volatilityCorrectOrder[i].id === step.id;
+    if(isCorrect) correct++;
+    li.classList.toggle("graded-correct", isCorrect);
+    li.classList.toggle("graded-wrong", !isCorrect);
+  });
+  const panel = document.getElementById("vol-score");
+  panel.classList.add("visible");
+  document.getElementById("vol-score-num").textContent = `${correct}/${volOrder.length}`;
+  document.getElementById("vol-score-num").className = "score-num " + (correct===volOrder.length?"pass":"fail");
+  document.getElementById("vol-score-msg").textContent = correct===volOrder.length
+    ? "That's the RFC 3227 order — collect what disappears first, first."
+    : "Rows in red are out of place. \"Correct rank\" on the right shows where each item actually belongs — drag to fix and resubmit.";
+});
+document.getElementById("vol-reset").addEventListener("click", ()=>{
+  volOrder = shuffleArr([...volatilityCorrectOrder]);
+  renderVolList();
+  document.getElementById("vol-score").classList.remove("visible");
+});
+
+/* ================= TAB 3 PART B: EVIDENCE HANDLING ================= */
+const forensicsScenarios = [
+  {q:"You've just made a forensic image of a seized laptop's hard drive. How do you prove the image hasn't been altered since collection?",
+   options:[{label:"Password-protect the file",value:"password"},{label:"Generate and compare cryptographic hashes (e.g., SHA-256) of the original and the image",value:"hash"},{label:"Store it on removable media",value:"media"},{label:"Email it to legal",value:"email"}],
+   answer:"hash",
+   explain:"A cryptographic hash of the original and the copy, taken at the time of imaging and rechecked later, is what proves the data hasn't changed — that's evidentiary integrity."},
+  {q:"Legal counsel says this incident may lead to litigation. What should be issued so relevant records aren't deleted by normal retention schedules?",
+   options:[{label:"A legal hold",value:"hold"},{label:"A press release",value:"press"},{label:"A patch notice",value:"patch"},{label:"A vulnerability scan",value:"scan"}],
+   answer:"hold",
+   explain:"A legal hold formally suspends normal deletion/retention policies for anything potentially relevant to the case."},
+  {q:"An analyst collects a hard drive as evidence. What must travel with it as it moves between the analyst, the evidence locker, and the forensic examiner?",
+   options:[{label:"A network diagram",value:"diagram"},{label:"A chain-of-custody form",value:"custody"},{label:"An NDA",value:"nda"},{label:"A vulnerability report",value:"vuln"}],
+   answer:"custody",
+   explain:"A chain-of-custody form records every person who has handled the evidence and when, so its integrity can be defended later if the case goes to court."},
+];
+function buildQBlock(containerId, scenarios){
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  scenarios.forEach(s=>{
+    const block = document.createElement("div");
+    block.className = "qblock";
+    block.dataset.answer = s.answer;
+    block.dataset.picked = "";
+    const qrow = document.createElement("div");
+    qrow.className = "qrow";
+    s.options.forEach(opt=>{
+      const span = document.createElement("span");
+      span.className = "radio-opt";
+      span.textContent = opt.label;
+      span.dataset.value = opt.value;
+      span.addEventListener("click", ()=>{
+        qrow.querySelectorAll(".radio-opt").forEach(o=>o.classList.remove("picked"));
+        span.classList.add("picked");
+        block.dataset.picked = opt.value;
+      });
+      qrow.appendChild(span);
+    });
+    block.innerHTML = `<div class="qtext">${s.q}</div>`;
+    block.appendChild(qrow);
+    const explainDiv = document.createElement("div");
+    explainDiv.className = "explain";
+    explainDiv.textContent = s.explain;
+    block.appendChild(explainDiv);
+    container.appendChild(block);
+  });
+}
+buildQBlock("forensics-block", forensicsScenarios);
+
+document.getElementById("forensics-submit").addEventListener("click", ()=>{
+  let correct = 0;
+  const blocks = document.querySelectorAll("#forensics-block .qblock");
+  blocks.forEach(block=>{
+    const isCorrect = block.dataset.picked === block.dataset.answer;
+    if(isCorrect) correct++;
+    block.querySelectorAll(".radio-opt").forEach(o=>{
+      o.style.borderColor = o.dataset.value===block.dataset.answer ? "var(--ok)" : (o.classList.contains("picked") ? "var(--bad)" : "var(--line)");
+    });
+    block.querySelector(".explain").style.display = "block";
+  });
+  const panel = document.getElementById("forensics-score");
+  panel.classList.add("visible");
+  document.getElementById("forensics-score-num").textContent = `${correct}/${blocks.length}`;
+  document.getElementById("forensics-score-num").className = "score-num " + (correct===blocks.length?"pass":"fail");
+  document.getElementById("forensics-score-msg").textContent = correct===blocks.length
+    ? "Hashing for integrity, a legal hold to preserve records, and a chain-of-custody form for physical evidence — the three pillars of defensible evidence handling."
+    : "Check each card's explanation below.";
+});
+document.getElementById("forensics-reset").addEventListener("click", ()=>{
+  document.querySelectorAll("#forensics-block .qblock").forEach(block=>{
+    block.dataset.picked = "";
+    block.querySelectorAll(".radio-opt").forEach(o=>{o.classList.remove("picked"); o.style.borderColor="var(--line)";});
+    block.querySelector(".explain").style.display = "none";
+  });
+  document.getElementById("forensics-score").classList.remove("visible");
+});
+
+/* ================= TAB 4: REPORTING & COMMUNICATION ================= */
+const stakeholderScenarios = [
+  {q:"A vulnerability scan found a critical, unpatched flaw on the server that handles cardholder payment data.",
+   options:[{label:"Marketing team",value:"marketing"},{label:"Compliance / Legal team",value:"compliance"},{label:"Facilities",value:"facilities"},{label:"HR",value:"hr"}],
+   answer:"compliance",
+   explain:"Cardholder data brings PCI-DSS obligations into play — Compliance/Legal needs to know so they can assess reporting and contractual obligations, not just the technical team."},
+  {q:"Customer PII was confirmed exfiltrated during the incident.",
+   options:[{label:"IT helpdesk",value:"helpdesk"},{label:"Legal / Privacy officer",value:"legal"},{label:"Sales",value:"sales"},{label:"Network engineering",value:"network"}],
+   answer:"legal",
+   explain:"Confirmed PII exposure typically triggers legally mandated breach-notification timelines — that's Legal/Privacy's call to make and manage, even though IT and network teams remain involved technically."},
+  {q:"Executive leadership wants a one-page, non-technical summary of business impact and remediation timeline for the board.",
+   options:[{label:"Technical incident report",value:"technical"},{label:"Executive summary",value:"exec"},{label:"Raw packet capture log",value:"pcap"},{label:"Raw vulnerability scan output",value:"scanraw"}],
+   answer:"exec",
+   explain:"Board-level audiences need business impact and next steps in plain language — that's an executive summary, distinct from the technical detail a SOC team would want."},
+  {q:"A financial-services regulator with jurisdiction over Solstice Financial requires notification of incidents affecting customer data within a set window.",
+   options:[{label:"Internal memo",value:"memo"},{label:"Regulatory / compliance notification",value:"regulatory"},{label:"Marketing press release",value:"press"},{label:"Internal Slack update",value:"slack"}],
+   answer:"regulatory",
+   explain:"A regulator with jurisdiction requires a formal regulatory/compliance notification, typically on a legally defined timeline — different in form and urgency from an internal update."},
+];
+const metricScenarios = [
+  {q:"The average time between when a compromise occurs and when the SOC actually detects it.",
+   options:[{label:"MTTD (Mean Time to Detect)",value:"mttd"},{label:"MTTR (Mean Time to Respond)",value:"mttr"},{label:"RPO",value:"rpo"},{label:"RTO",value:"rto"}],
+   answer:"mttd",
+   explain:"MTTD measures the detection gap — how long a compromise sits unnoticed before the SOC catches it."},
+  {q:"The average time it takes the team to fully remediate and close out an incident once it's been detected.",
+   options:[{label:"MTTD",value:"mttd"},{label:"MTTR (Mean Time to Respond/Resolve)",value:"mttr"},{label:"ARO",value:"aro"},{label:"SLE",value:"sle"}],
+   answer:"mttr",
+   explain:"MTTR picks up where MTTD leaves off: the clock from detection to full resolution."},
+  {q:"The maximum acceptable amount of data loss, measured in time, used to plan backup frequency.",
+   options:[{label:"RTO",value:"rto"},{label:"RPO (Recovery Point Objective)",value:"rpo"},{label:"MTTD",value:"mttd"},{label:"SLE",value:"sle"}],
+   answer:"rpo",
+   explain:"RPO answers \"how much data can we afford to lose?\" and directly drives how often backups need to run."},
+  {q:"The target duration for restoring a system or service after a disruption.",
+   options:[{label:"RTO (Recovery Time Objective)",value:"rto"},{label:"RPO",value:"rpo"},{label:"MTTR",value:"mttr"},{label:"ARO",value:"aro"}],
+   answer:"rto",
+   explain:"RTO answers \"how long can this be down before it's a real problem?\" — a DR/BC planning metric, distinct from RPO's data-loss focus."},
+];
+buildQBlock("stakeholder-block", stakeholderScenarios);
+buildQBlock("metrics-block", metricScenarios);
+
+document.getElementById("report-submit").addEventListener("click", ()=>{
+  let correct = 0, total = 0;
+  document.querySelectorAll("#stakeholder-block .qblock, #metrics-block .qblock").forEach(block=>{
+    total++;
+    const isCorrect = block.dataset.picked === block.dataset.answer;
+    if(isCorrect) correct++;
+    block.querySelectorAll(".radio-opt").forEach(o=>{
+      o.style.borderColor = o.dataset.value===block.dataset.answer ? "var(--ok)" : (o.classList.contains("picked") ? "var(--bad)" : "var(--line)");
+    });
+    block.querySelector(".explain").style.display = "block";
+  });
+  const panel = document.getElementById("report-score");
+  panel.classList.add("visible");
+  document.getElementById("report-score-num").textContent = `${correct}/${total}`;
+  document.getElementById("report-score-num").className = "score-num " + (correct===total?"pass":"fail");
+  document.getElementById("report-score-msg").textContent = correct===total
+    ? "Right audience, right format, right metric — that's the reporting domain in a nutshell."
+    : "Check each card's explanation — who needs to know often depends on legal/regulatory exposure, not just technical severity.";
+});
+document.getElementById("report-reset").addEventListener("click", ()=>{
+  document.querySelectorAll("#stakeholder-block .qblock, #metrics-block .qblock").forEach(block=>{
+    block.dataset.picked = "";
+    block.querySelectorAll(".radio-opt").forEach(o=>{o.classList.remove("picked"); o.style.borderColor="var(--line)";});
+    block.querySelector(".explain").style.display = "none";
+  });
+  document.getElementById("report-score").classList.remove("visible");
+});
+</script>
+<script src="cysa-pbq.js"></script>
+</body>
+</html>
