@@ -23,6 +23,10 @@
   .pbq-nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:7px 12px;}
   .pbq-nav a:hover{border-color:var(--cyan);color:var(--cyan);}
   .pbq-nav a.current{color:var(--amber);border-color:var(--amber);}
+  .pbq-nav a.cysa-link{color:var(--amber);border-color:var(--amber);font-weight:600;}
+  .json-controls{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 18px;}
+  .json-controls button{font-family:var(--mono);font-size:11px;padding:7px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--muted);cursor:pointer;}
+  .json-controls button:hover{border-color:var(--cyan);color:var(--cyan);}
 
   .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:0;}
   .tab-btn{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;padding:10px 14px;cursor:pointer;border-radius:6px 6px 0 0;}
@@ -94,12 +98,18 @@
 
   <nav class="pbq-nav">
     <a href="index.html">← All PBQs</a>
-    <a href="cysa-pbq.html#vuln" class="current">CySA+ PBQ</a>
+    <a href="cysa-pbq.html#vuln" class="cysa-link">CySA+ PBQ</a>
     <a href="cysa-pbq-suite.html#vuln" class="current" data-panel-link="vuln">1 · Vulnerability Mgmt</a>
     <a href="cysa-pbq-suite.html#secops" data-panel-link="secops">2 · Security Operations</a>
     <a href="cysa-pbq-suite.html#ir" data-panel-link="ir">3 · Incident Response</a>
     <a href="cysa-pbq-suite.html#report" data-panel-link="report">4 · Reporting</a>
   </nav>
+
+  <div class="json-controls" aria-label="CySA+ progress file controls">
+    <button type="button" id="export-json">Export JSON</button>
+    <button type="button" id="import-json">Import JSON</button>
+    <input type="file" id="import-json-file" accept="application/json,.json" hidden>
+  </div>
 
   <div class="banner">
     <div class="tag">PBQ SIMULATOR SUITE · CS0-003 PRACTICE</div>
@@ -673,6 +683,114 @@ document.getElementById("report-reset").addEventListener("click", ()=>{
     block.querySelector(".explain").style.display = "none";
   });
   document.getElementById("report-score").classList.remove("visible");
+});
+
+/* ---------- JSON PROGRESS FILES ---------- */
+const jsonExportVersion = 1;
+const jsonQuestionData = {
+  vulnerabilityManagement: vulns,
+  securityOperations: secopsLogs,
+  orderOfVolatility: volatilityCorrectOrder,
+  evidenceHandling: forensicsScenarios,
+  stakeholderReporting: stakeholderScenarios,
+  securityMetrics: metricScenarios,
+};
+
+function getPickedValues(selector){
+  return [...document.querySelectorAll(selector)].map(element => element.dataset.picked || "");
+}
+
+function setPickedValue(element, value){
+  element.dataset.picked = value || "";
+  element.querySelectorAll(".radio-opt").forEach(option => {
+    option.classList.toggle("picked", option.dataset.value === value);
+  });
+}
+
+function getJsonProgress(){
+  return {
+    format: "cysa-pbq-progress",
+    version: jsonExportVersion,
+    exportedAt: new Date().toISOString(),
+    questionData: jsonQuestionData,
+    progress: {
+      activePanel: location.hash.replace("#", "") || "vuln",
+      vulnerabilityAnswers: vulns.map((v, i) => document.getElementById(`vuln-sel-${i}`).value),
+      securityOperationFlags: secopsFlags,
+      securityOperationAnswers: getPickedValues("#q-dns-opts, #q-lateral-opts, #q-source-opts"),
+      volatilityOrder: volOrder.map(step => step.id),
+      evidenceAnswers: getPickedValues("#forensics-block .qblock"),
+      stakeholderAnswers: getPickedValues("#stakeholder-block .qblock"),
+      metricAnswers: getPickedValues("#metrics-block .qblock"),
+    },
+  };
+}
+
+function restorePickedValues(selector, values){
+  document.querySelectorAll(selector).forEach((element, index) => {
+    setPickedValue(element, Array.isArray(values) ? values[index] : "");
+  });
+}
+
+function restoreJsonProgress(data){
+  if(!data || data.format !== "cysa-pbq-progress" || data.version !== jsonExportVersion || !data.progress){
+    throw new Error("This is not a supported CySA+ PBQ progress file.");
+  }
+  const progress = data.progress;
+  if(Array.isArray(progress.vulnerabilityAnswers)){
+    vulns.forEach((v, i) => {
+      document.getElementById(`vuln-sel-${i}`).value = progress.vulnerabilityAnswers[i] || "";
+    });
+  }
+  if(Array.isArray(progress.securityOperationFlags) && progress.securityOperationFlags.length === secopsLogs.length){
+    secopsFlags = progress.securityOperationFlags.map(Boolean);
+    secopsFlags.forEach((flag, i) => {
+      const row = secopsBody.children[i];
+      row.style.background = flag ? "rgba(79,195,217,0.10)" : "";
+      document.getElementById(`secops-icon-${i}`).textContent = flag ? "●" : "";
+    });
+  }
+  restorePickedValues("#q-dns-opts, #q-lateral-opts, #q-source-opts", progress.securityOperationAnswers);
+  if(Array.isArray(progress.volatilityOrder) && progress.volatilityOrder.length === volatilityCorrectOrder.length){
+    const stepsById = Object.fromEntries(volatilityCorrectOrder.map(step => [step.id, step]));
+    const restoredOrder = progress.volatilityOrder.map(id => stepsById[id]);
+    if(restoredOrder.every(Boolean)){
+      volOrder = restoredOrder;
+      renderVolList();
+    }
+  }
+  restorePickedValues("#forensics-block .qblock, #stakeholder-block .qblock, #metrics-block .qblock", [
+    ...(progress.evidenceAnswers || []),
+    ...(progress.stakeholderAnswers || []),
+    ...(progress.metricAnswers || []),
+  ]);
+  activatePanel(progress.activePanel);
+}
+
+document.getElementById("export-json").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(getJsonProgress(), null, 2)], {type:"application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "cysa-pbq-progress.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+document.getElementById("import-json").addEventListener("click", ()=> document.getElementById("import-json-file").click());
+document.getElementById("import-json-file").addEventListener("change", event=>{
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", ()=>{
+    try{
+      restoreJsonProgress(JSON.parse(reader.result));
+      alert("CySA+ PBQ progress imported.");
+    }catch(error){
+      alert(error.message);
+    }
+    event.target.value = "";
+  });
+  reader.readAsText(file);
 });
 </script>
 <script src="cysa-pbq.js"></script>
